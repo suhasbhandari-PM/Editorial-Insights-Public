@@ -1,0 +1,6 @@
+ga4api.json
+.clasp-remote-check
+.clasp-version-*
+.playwright-mcp/
+node_modules/
+*.env

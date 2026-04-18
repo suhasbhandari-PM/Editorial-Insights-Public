@@ -1,0 +1,60 @@
+/**
+ * Temporary helper for Apps Script editor.
+ *
+ * Usage:
+ * 1. Paste this into the Apps Script project.
+ * 2. Run `debugSnapshotJsonForDh_()`.
+ * 3. Open Executions/Logs and copy the reconstructed JSON string.
+ * 4. Remove this helper after use.
+ */
+
+function debugSnapshotJsonForDh_() {
+  return debugSnapshotJsonForProperty_('properties/358342113');
+}
+
+function debugSnapshotJsonForPv_() {
+  return debugSnapshotJsonForProperty_('properties/357974664');
+}
+
+function debugSnapshotJsonForProperty_(propertyId) {
+  var property = sanitizePropertyId_(propertyId || DEFAULT_PROPERTY);
+  var spreadsheet = getDashboardSpreadsheet_();
+  var sheet = spreadsheet.getSheetByName(DASHBOARD_SNAPSHOT_SHEET);
+  if (!sheet) {
+    throw new Error('Snapshot sheet not found: ' + DASHBOARD_SNAPSHOT_SHEET);
+  }
+
+  ensureDashboardSnapshotHeader_(sheet);
+  var row = findDashboardSnapshotRow_(sheet, property);
+  if (!row) {
+    throw new Error('No snapshot row found for ' + property);
+  }
+
+  var lastCol = Math.max(sheet.getLastColumn(), DASHBOARD_SNAPSHOT_CHUNK_COL_START);
+  var rowValues = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
+  var chunkCount = toNumber_(rowValues[4]);
+  if (!chunkCount) {
+    throw new Error('Snapshot row has no chunk_count for ' + property);
+  }
+
+  var startIndex = DASHBOARD_SNAPSHOT_CHUNK_COL_START - 1;
+  var chunks = rowValues.slice(startIndex, startIndex + chunkCount);
+  var payload = chunks.map(function (value) {
+    return value == null ? '' : String(value);
+  }).join('');
+
+  // Validate before returning
+  JSON.parse(payload);
+
+  Logger.log(payload);
+  return {
+    propertyId: property,
+    row: row,
+    chunkCount: chunkCount,
+    payloadLength: payload.length,
+    generatedAt: rowValues[1],
+    startDate: rowValues[2],
+    endDate: rowValues[3],
+    payload: payload
+  };
+}
